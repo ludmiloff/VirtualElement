@@ -182,7 +182,6 @@ class VirtualElement {
       };
     }
 
-    // console.log(this.__partKeys__, this.__parts__);
     const partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {});
     let _part = this.__parts__.get(partKey);
     if (!_part) {
