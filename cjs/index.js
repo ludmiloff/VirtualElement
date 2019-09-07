@@ -13,7 +13,7 @@ function tearDown(mutations) {
   mutations.forEach((mutation) => {
     components.forEach((comp) => {
       if (includes.call(mutation.removedNodes, comp.node) || (!document.body.contains(comp.node))) {
-        comp.disconnectedCallback();
+        comp.onDisconnected();
         const _key = comp.key;
         components.delete(_key);
       }
@@ -183,7 +183,6 @@ class VirtualElement {
       };
     }
 
-    // console.log(this.__partKeys__, this.__parts__);
     const partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {});
     let _part = this.__parts__.get(partKey);
     if (!_part) {
@@ -217,37 +216,29 @@ class VirtualElement {
   }
 
   _setProps(props) {
-    // console.log('SET PROPS = ', props);
     if (props) {
-      if (this.updated(props)) { return; }
+      if (this.onUpdated(props)) { return; }
       Object.keys(props).forEach((key) => {
-        // console.log(`SETTING PROP: ${key} =  ${props[key]}`);
         this._setPropertyValue(key, props[key]);
       });
     }
     // this.invalidate();
   }
 
-  connectedCallback() {
-    // console.log('connected', this.constructor.name);
-  }
+  onConnected() {}
 
-  disconnectedCallback() {
+  onDisconnected() {
     // fix possible memory leak with container components displaying multiple list items
     if (this.__parent__ && this.__parent__.__childs__) {
       delete this.__parent__.__childs__[this.id];
     }
     this._connected = false;
-    // console.log('disconnected', this.constructor.name);
   }
 
-  renderCallback() {
-    // console.log('render callback', this.constructor.name);
-  }
+  onRender() {}
 
   invalidate() {
     if (!this._needsRender) {
-      // console.log('invalidated', this.constructor.name);
       this._needsRender = true;
       Promise.resolve().then(() => {
         if (this._needsRender) this.update();
@@ -256,11 +247,10 @@ class VirtualElement {
   }
 
   // eslint-disable-next-line no-unused-vars
-  updated(changedProps) {}
+  onUpdated(changedProps) {}
 
   update() {
     if (this._connected) {
-      // console.log('updated', this.constructor.name);
       return this._updater();
     }
     return '';
@@ -269,10 +259,10 @@ class VirtualElement {
   _updater() {
     const template = this.render();
     const wire = this._node || (this._node = this.wire(template));
-    this.renderCallback();
+    this.onRender();
     if (!this._connected) {
       this._connected = true;
-      setTimeout(() => this.connectedCallback());
+      setTimeout(() => this.onConnected());
     }
     this._needsRender = false;
     return wire;
@@ -294,7 +284,6 @@ class VirtualElement {
   // data modeling
 
   vModel(attr) {
-    // console.log('VMODEL', attr);
     const self = this;
     function x() {
       return self.__values__[attr];
@@ -311,7 +300,6 @@ class VirtualElement {
         case 'update': {
           if (this.__values__[modifier].model) {
             const attr = this.__values__[modifier].model();
-            // console.log('--- EMITTING UPDATE', attr, payload);
             this.__parent__._setPropertyValue(attr, payload);
           } else {
             this.__values__[modifier] = payload;

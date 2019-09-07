@@ -58,6 +58,5 @@ function vAnimation(cond, comp, key, name) {
   }
 
   return html.for(key)`<div class="${className}">${comp}</div>`;
-
 }
 exports.vAnimation = vAnimation

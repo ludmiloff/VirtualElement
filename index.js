@@ -1810,7 +1810,7 @@ var virtualelement = (function (document,exports) {
     mutations.forEach(function (mutation) {
       components.forEach(function (comp) {
         if (includes.call(mutation.removedNodes, comp.node) || !document.body.contains(comp.node)) {
-          comp.disconnectedCallback();
+          comp.onDisconnected();
           var _key = comp.key;
           components["delete"](_key);
         }
@@ -2015,8 +2015,7 @@ var virtualelement = (function (document,exports) {
 
             return wire || (wire = wiredContent$1(result));
           };
-        } // console.log(this.__partKeys__, this.__parts__);
-
+        }
 
         var partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {});
 
@@ -2049,44 +2048,39 @@ var virtualelement = (function (document,exports) {
       value: function _setProps(props) {
         var _this2 = this;
 
-        // console.log('SET PROPS = ', props);
         if (props) {
-          if (this.updated(props)) {
+          if (this.onUpdated(props)) {
             return;
           }
 
           Object.keys(props).forEach(function (key) {
-            // console.log(`SETTING PROP: ${key} =  ${props[key]}`);
             _this2._setPropertyValue(key, props[key]);
           });
         } // this.invalidate();
 
       }
     }, {
-      key: "connectedCallback",
-      value: function connectedCallback() {// console.log('connected', this.constructor.name);
-      }
+      key: "onConnected",
+      value: function onConnected() {}
     }, {
-      key: "disconnectedCallback",
-      value: function disconnectedCallback() {
+      key: "onDisconnected",
+      value: function onDisconnected() {
         // fix possible memory leak with container components displaying multiple list items
         if (this.__parent__ && this.__parent__.__childs__) {
           delete this.__parent__.__childs__[this.id];
         }
 
-        this._connected = false; // console.log('disconnected', this.constructor.name);
+        this._connected = false;
       }
     }, {
-      key: "renderCallback",
-      value: function renderCallback() {// console.log('render callback', this.constructor.name);
-      }
+      key: "onRender",
+      value: function onRender() {}
     }, {
       key: "invalidate",
       value: function invalidate() {
         var _this3 = this;
 
         if (!this._needsRender) {
-          // console.log('invalidated', this.constructor.name);
           this._needsRender = true;
           Promise.resolve().then(function () {
             if (_this3._needsRender) _this3.update();
@@ -2095,13 +2089,12 @@ var virtualelement = (function (document,exports) {
       } // eslint-disable-next-line no-unused-vars
 
     }, {
-      key: "updated",
-      value: function updated(changedProps) {}
+      key: "onUpdated",
+      value: function onUpdated(changedProps) {}
     }, {
       key: "update",
       value: function update() {
         if (this._connected) {
-          // console.log('updated', this.constructor.name);
           return this._updater();
         }
 
@@ -2114,12 +2107,12 @@ var virtualelement = (function (document,exports) {
 
         var template = this.render();
         var wire = this._node || (this._node = this.wire(template));
-        this.renderCallback();
+        this.onRender();
 
         if (!this._connected) {
           this._connected = true;
           setTimeout(function () {
-            return _this4.connectedCallback();
+            return _this4.onConnected();
           });
         }
 
@@ -2147,7 +2140,6 @@ var virtualelement = (function (document,exports) {
     }, {
       key: "vModel",
       value: function vModel(attr) {
-        // console.log('VMODEL', attr);
         var self = this;
 
         function x() {
@@ -2174,8 +2166,7 @@ var virtualelement = (function (document,exports) {
             case 'update':
               {
                 if (this.__values__[modifier].model) {
-                  var attr = this.__values__[modifier].model(); // console.log('--- EMITTING UPDATE', attr, payload);
-
+                  var attr = this.__values__[modifier].model();
 
                   this.__parent__._setPropertyValue(attr, payload);
                 } else {
