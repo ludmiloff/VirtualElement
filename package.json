@@ -1,7 +1,7 @@
 {
-  "name": "virtualelement",
+  "name": "veljs",
   "version": "0.1.0",
-  "description": "lighterhtml based virtual elements for building web applications",
+  "description": "VirtualElement.js - a lighterhtml based virtual elements for building web applications",
   "main": "cjs/index.js",
   "module": "esm/index.js",
   "unpkg": "min.js",

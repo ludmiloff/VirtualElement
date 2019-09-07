@@ -1,4 +1,4 @@
-var virtualelement = (function (document,exports) {
+var veljs = (function (document,exports) {
   'use strict';
 
   
