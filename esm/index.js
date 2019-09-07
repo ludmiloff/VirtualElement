@@ -216,20 +216,16 @@ class VirtualElement {
   }
 
   _setProps(props) {
-    // console.log('SET PROPS = ', props);
     if (props) {
       if (this.onUpdated(props)) { return; }
       Object.keys(props).forEach((key) => {
-        // console.log(`SETTING PROP: ${key} =  ${props[key]}`);
         this._setPropertyValue(key, props[key]);
       });
     }
     // this.invalidate();
   }
 
-  onConnected() {
-    // console.log('connected', this.constructor.name);
-  }
+  onConnected() {}
 
   onDisconnected() {
     // fix possible memory leak with container components displaying multiple list items
@@ -237,16 +233,12 @@ class VirtualElement {
       delete this.__parent__.__childs__[this.id];
     }
     this._connected = false;
-    // console.log('disconnected', this.constructor.name);
   }
 
-  onRender() {
-    // console.log('render callback', this.constructor.name);
-  }
+  onRender() {}
 
   invalidate() {
     if (!this._needsRender) {
-      // console.log('invalidated', this.constructor.name);
       this._needsRender = true;
       Promise.resolve().then(() => {
         if (this._needsRender) this.update();
@@ -259,7 +251,6 @@ class VirtualElement {
 
   update() {
     if (this._connected) {
-      // console.log('updated', this.constructor.name);
       return this._updater();
     }
     return '';
@@ -293,7 +284,6 @@ class VirtualElement {
   // data modeling
 
   vModel(attr) {
-    // console.log('VMODEL', attr);
     const self = this;
     function x() {
       return self.__values__[attr];
@@ -310,7 +300,6 @@ class VirtualElement {
         case 'update': {
           if (this.__values__[modifier].model) {
             const attr = this.__values__[modifier].model();
-            // console.log('--- EMITTING UPDATE', attr, payload);
             this.__parent__._setPropertyValue(attr, payload);
           } else {
             this.__values__[modifier] = payload;
