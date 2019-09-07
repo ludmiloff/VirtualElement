@@ -12,7 +12,7 @@ function tearDown(mutations) {
   mutations.forEach((mutation) => {
     components.forEach((comp) => {
       if (includes.call(mutation.removedNodes, comp.node) || (!document.body.contains(comp.node))) {
-        comp.disconnectedCallback();
+        comp.onDisconnected();
         const _key = comp.key;
         components.delete(_key);
       }
@@ -218,7 +218,7 @@ class VirtualElement {
   _setProps(props) {
     // console.log('SET PROPS = ', props);
     if (props) {
-      if (this.updated(props)) { return; }
+      if (this.onUpdated(props)) { return; }
       Object.keys(props).forEach((key) => {
         // console.log(`SETTING PROP: ${key} =  ${props[key]}`);
         this._setPropertyValue(key, props[key]);
@@ -227,11 +227,11 @@ class VirtualElement {
     // this.invalidate();
   }
 
-  connectedCallback() {
+  onConnected() {
     // console.log('connected', this.constructor.name);
   }
 
-  disconnectedCallback() {
+  onDisconnected() {
     // fix possible memory leak with container components displaying multiple list items
     if (this.__parent__ && this.__parent__.__childs__) {
       delete this.__parent__.__childs__[this.id];
@@ -240,7 +240,7 @@ class VirtualElement {
     // console.log('disconnected', this.constructor.name);
   }
 
-  renderCallback() {
+  onRender() {
     // console.log('render callback', this.constructor.name);
   }
 
@@ -255,7 +255,7 @@ class VirtualElement {
   }
 
   // eslint-disable-next-line no-unused-vars
-  updated(changedProps) {}
+  onUpdated(changedProps) {}
 
   update() {
     if (this._connected) {
@@ -268,10 +268,10 @@ class VirtualElement {
   _updater() {
     const template = this.render();
     const wire = this._node || (this._node = this.wire(template));
-    this.renderCallback();
+    this.onRender();
     if (!this._connected) {
       this._connected = true;
-      setTimeout(() => this.connectedCallback());
+      setTimeout(() => this.onConnected());
     }
     this._needsRender = false;
     return wire;
