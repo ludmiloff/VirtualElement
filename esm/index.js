@@ -1,6 +1,6 @@
 import { Wire } from 'lighterhtml/esm/shared';
 import Tagger from 'lighterhtml/esm/tagger';
-import { html, svg } from 'lighterhtml';
+import { html, svg, render } from 'lighterhtml';
 
 // eslint-disable-next-line prefer-destructuring
 const includes = Array.prototype.includes;
@@ -325,6 +325,7 @@ export {
   VirtualElement,
   Component,
   // helpers
+  render,
   html,
   svg,
   mapClass,
