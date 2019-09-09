@@ -1,9 +1,13 @@
 node_modules/
 test/
 _config.yml
+.git/
+.idea/
 .DS_Store
 .gitignore
 .travis.yml
+.editorconfig
 package-lock.json
 rollup.config.js
 es.config.js
+*.sh
