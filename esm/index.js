@@ -248,7 +248,7 @@ class VirtualElement {
 
   _updater() {
     const template = this.render();
-    const wire = this._node || (this._node = this.v2 ? template : this.wire(template));
+    const wire = this._node || (this._node = this.v2 ? template : wiredContent(template));
     this.onRender();
     if (!this._connected) {
       this._connected = true;
@@ -256,15 +256,6 @@ class VirtualElement {
     }
     this._needsRender = false;
     return wire;
-  }
-
-  wire(node) {
-    const { childNodes } = node;
-    const { length } = childNodes;
-    if (length === 1) {
-      return childNodes[0];
-    }
-    return (length ? new Wire(childNodes) : node);
   }
 
   render() {
