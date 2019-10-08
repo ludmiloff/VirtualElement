@@ -146,12 +146,11 @@ class VirtualElement {
 
     // partial render keys
     this.__partKeys__ = {};
-    this.__parts__ = new WeakMap();
 
     // property watchers
     this.watched = {};
 
-    // TODO: styles registry
+    // styles registry
     this.stylesRegistry = {};
     this.styles = {};
 
@@ -172,26 +171,16 @@ class VirtualElement {
   }
 
   part(partId) {
+    const partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {tagger: new Tagger('html'), wire: null});
 
-    function _createPart() {
-      let wire = null;
-      const $1 = new Tagger('html');
-      return function() {
-        // eslint-disable-next-line prefer-spread, prefer-rest-params
-        const result = $1.apply(null, arguments);
-        // eslint-disable-next-line no-return-assign
-        return wire || (wire = wiredContent(result));
-      };
-    }
-
-    const partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {});
-    let _part = this.__parts__.get(partKey);
-    if (!_part) {
-      _part = _createPart();
-      this.__parts__.set(partKey, _part);
-    }
-    return _part;
-  }
+    return function() {
+      // eslint-disable-next-line prefer-spread, prefer-rest-params
+      const result = partKey.tagger.apply(null, arguments);
+      // console.log(result);
+      // eslint-disable-next-line no-return-assign
+      return partKey.wire || (partKey.wire = wiredContent(result));
+    }    
+  }  
 
   get html() { return this._html; }
 
