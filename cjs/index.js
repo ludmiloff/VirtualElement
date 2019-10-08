@@ -1,7 +1,7 @@
 'use strict';
 const { Wire } = require('lighterhtml/esm/shared');
 const Tagger = (m => m.__esModule ? /* istanbul ignore next */ m.default : /* istanbul ignore next */ m)(require('lighterhtml/esm/tagger'));
-const { html, svg } = require('lighterhtml');
+const { html, svg, render } = require('lighterhtml');
 
 // eslint-disable-next-line prefer-destructuring
 const includes = Array.prototype.includes;
@@ -123,6 +123,8 @@ class VirtualElement {
 
   constructor() {
     // html renderer internals
+    // setting v2 to true will switch to version 2 rendering style
+    this.v2 = false;
     this.$ = new Tagger('html');
     this._html = function () {
       return this.$.apply(null, arguments);
@@ -145,12 +147,11 @@ class VirtualElement {
 
     // partial render keys
     this.__partKeys__ = {};
-    this.__parts__ = new WeakMap();
 
     // property watchers
     this.watched = {};
 
-    // TODO: styles registry
+    // styles registry
     this.stylesRegistry = {};
     this.styles = {};
 
@@ -171,26 +172,16 @@ class VirtualElement {
   }
 
   part(partId) {
+    const partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {tagger: new Tagger('html'), wire: null});
 
-    function _createPart() {
-      let wire = null;
-      const $1 = new Tagger('html');
-      return function() {
-        // eslint-disable-next-line prefer-spread, prefer-rest-params
-        const result = $1.apply(null, arguments);
-        // eslint-disable-next-line no-return-assign
-        return wire || (wire = wiredContent(result));
-      };
-    }
-
-    const partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {});
-    let _part = this.__parts__.get(partKey);
-    if (!_part) {
-      _part = _createPart();
-      this.__parts__.set(partKey, _part);
-    }
-    return _part;
-  }
+    return function() {
+      // eslint-disable-next-line prefer-spread, prefer-rest-params
+      const result = partKey.tagger.apply(null, arguments);
+      // console.log(result);
+      // eslint-disable-next-line no-return-assign
+      return partKey.wire || (partKey.wire = wiredContent(result));
+    }    
+  }  
 
   get html() { return this._html; }
 
@@ -258,7 +249,7 @@ class VirtualElement {
 
   _updater() {
     const template = this.render();
-    const wire = this._node || (this._node = this.wire(template));
+    const wire = this._node || (this._node = this.v2 ? template : wiredContent(template));
     this.onRender();
     if (!this._connected) {
       this._connected = true;
@@ -266,15 +257,6 @@ class VirtualElement {
     }
     this._needsRender = false;
     return wire;
-  }
-
-  wire(node) {
-    const { childNodes } = node;
-    const { length } = childNodes;
-    if (length === 1) {
-      return childNodes[0];
-    }
-    return (length ? new Wire(childNodes) : node);
   }
 
   render() {
@@ -324,6 +306,7 @@ const { mapClass, ifdef, vFor, vLoop, vIf, vAnimation } = require('./helpers');
 
 exports.VirtualElement = VirtualElement
 exports.Component = Component
+exports.render = render
 exports.html = html
 exports.svg = svg
 exports.mapClass = mapClass

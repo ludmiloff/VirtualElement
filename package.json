@@ -1,6 +1,6 @@
 {
   "name": "veljs",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "VirtualElement.js - a lighterhtml based virtual elements for building web applications",
   "main": "cjs/index.js",
   "module": "esm/index.js",

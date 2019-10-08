@@ -1558,7 +1558,8 @@ var veljs = (function (document,exports) {
 
   var _lighterhtml = lighterhtml(Tagger),
       html$1 = _lighterhtml.html,
-      svg = _lighterhtml.svg;
+      svg = _lighterhtml.svg,
+      render = _lighterhtml.render;
 
   function appendClean(node, fragment) {
     node.textContent = '';
@@ -1959,6 +1960,8 @@ var veljs = (function (document,exports) {
       _classCallCheck(this, VirtualElement);
 
       // html renderer internals
+      // setting v2 to true will switch to version 2 rendering style
+      this.v2 = false;
       this.$ = new Tagger('html');
 
       this._html = function () {
@@ -1979,10 +1982,9 @@ var veljs = (function (document,exports) {
       this._connected = false;
       this.__values__ = {}; // partial render keys
 
-      this.__partKeys__ = {};
-      this.__parts__ = new WeakMap(); // property watchers
+      this.__partKeys__ = {}; // property watchers
 
-      this.watched = {}; // TODO: styles registry
+      this.watched = {}; // styles registry
 
       this.stylesRegistry = {};
       this.styles = {};
@@ -2006,28 +2008,17 @@ var veljs = (function (document,exports) {
     _createClass(VirtualElement, [{
       key: "part",
       value: function part(partId) {
-        function _createPart() {
-          var wire = null;
-          var $1 = new Tagger('html');
-          return function () {
-            // eslint-disable-next-line prefer-spread, prefer-rest-params
-            var result = $1.apply(null, arguments); // eslint-disable-next-line no-return-assign
+        var partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {
+          tagger: new Tagger('html'),
+          wire: null
+        });
+        return function () {
+          // eslint-disable-next-line prefer-spread, prefer-rest-params
+          var result = partKey.tagger.apply(null, arguments); // console.log(result);
+          // eslint-disable-next-line no-return-assign
 
-            return wire || (wire = wiredContent$1(result));
-          };
-        }
-
-        var partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {});
-
-        var _part = this.__parts__.get(partKey);
-
-        if (!_part) {
-          _part = _createPart();
-
-          this.__parts__.set(partKey, _part);
-        }
-
-        return _part;
+          return partKey.wire || (partKey.wire = wiredContent$1(result));
+        };
       }
     }, {
       key: "_setPropertyValue",
@@ -2106,7 +2097,7 @@ var veljs = (function (document,exports) {
         var _this4 = this;
 
         var template = this.render();
-        var wire = this._node || (this._node = this.wire(template));
+        var wire = this._node || (this._node = this.v2 ? template : wiredContent$1(template));
         this.onRender();
 
         if (!this._connected) {
@@ -2118,18 +2109,6 @@ var veljs = (function (document,exports) {
 
         this._needsRender = false;
         return wire;
-      }
-    }, {
-      key: "wire",
-      value: function wire(node) {
-        var childNodes = node.childNodes;
-        var length = childNodes.length;
-
-        if (length === 1) {
-          return childNodes[0];
-        }
-
-        return length ? new Wire(childNodes) : node;
       }
     }, {
       key: "render",
@@ -2224,6 +2203,7 @@ var veljs = (function (document,exports) {
   exports.html = html$1;
   exports.ifdef = ifdef;
   exports.mapClass = mapClass;
+  exports.render = render;
   exports.svg = svg;
   exports.vAnimation = vAnimation;
   exports.vFor = vFor;
