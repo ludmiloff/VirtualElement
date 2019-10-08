@@ -122,6 +122,8 @@ class VirtualElement {
 
   constructor() {
     // html renderer internals
+    // setting v2 to true will switch to version 2 rendering style
+    this.v2 = false;
     this.$ = new Tagger('html');
     this._html = function () {
       return this.$.apply(null, arguments);
@@ -257,7 +259,7 @@ class VirtualElement {
 
   _updater() {
     const template = this.render();
-    const wire = this._node || (this._node = this.wire(template));
+    const wire = this._node || (this._node = this.v2 ? template : this.wire(template));
     this.onRender();
     if (!this._connected) {
       this._connected = true;
