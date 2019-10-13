@@ -11,6 +11,10 @@ const components = new Map();
 function tearDown(mutations) {
   mutations.forEach((mutation) => {
     components.forEach((comp) => {
+      if (comp.hydrated) {
+        // do not remove hydrated components
+        return;
+      }
       if (includes.call(mutation.removedNodes, comp.node) || (!document.body.contains(comp.node))) {
         comp.onDisconnected();
         const _key = comp.key;
@@ -122,6 +126,8 @@ class VirtualElement {
 
   constructor() {
     // html renderer internals
+    // set hydrated=true for bypass first render and use content provided by SSR
+    this.hydrated = false;
     // setting v2 to true will switch to version 2 rendering style
     this.v2 = false;
     this.$ = new Tagger('html');
@@ -176,7 +182,6 @@ class VirtualElement {
     return function() {
       // eslint-disable-next-line prefer-spread, prefer-rest-params
       const result = partKey.tagger.apply(null, arguments);
-      // console.log(result);
       // eslint-disable-next-line no-return-assign
       return partKey.wire || (partKey.wire = wiredContent(result));
     }    
@@ -198,7 +203,7 @@ class VirtualElement {
     const oldVal = this.__values__[property];
     this.__values__[property] = value;
     if (oldVal !== value || typeof value === 'object') {
-      if (this.watched[property] && this.watched[property](value)) {
+      if (this.watched[property] && this.watched[property](value, oldValue)) {
         return;
       }
       if (!this._needsRender) this.invalidate();
@@ -230,6 +235,10 @@ class VirtualElement {
   invalidate() {
     if (!this._needsRender) {
       this._needsRender = true;
+      if (this.hydrated) {
+        Promise.resolve().then(() => this.deHydrate());
+        return;
+      }
       Promise.resolve().then(() => {
         if (this._needsRender) this.update();
       });
@@ -246,8 +255,14 @@ class VirtualElement {
     return '';
   }
 
+  // ugly, yet working solution to continue normal work after first render
+  deHydrate() {
+    this._node = null;
+    this.hydrated = false;
+    this.__parent__.invalidate();
+  }
   _updater() {
-    const template = this.render();
+    const template = this.hydrated ? this._node : this.render();
     const wire = this._node || (this._node = this.v2 ? template : wiredContent(template));
     this.onRender();
     if (!this._connected) {
