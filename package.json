@@ -30,6 +30,9 @@
     "hyphenizer": "^0.1.1",
     "lighterhtml": "^1.0.6"
   },
+  "peerDependencies": {
+    "babel-plugin-transform-veljs-jsx": "0.2.0"
+  },
   "devDependencies": {
     "@babel/core": "^7.4.4",
     "@babel/preset-env": "^7.4.4",
