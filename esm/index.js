@@ -316,7 +316,7 @@ class VirtualElement {
   }
 }
 
-import { mapClass, ifdef, vFor, vLoop, vIf, vAnimation, Template } from './helpers';
+import { mapClass, ifdef, vFor, vLoop, vIf, vAnimation } from './helpers';
 
 export {
   VirtualElement,
@@ -328,7 +328,6 @@ export {
   mapClass,
   ifdef,
   // directives
-  Template,
   vFor,
   vLoop,
   vIf,

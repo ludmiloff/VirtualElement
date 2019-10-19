@@ -9,39 +9,6 @@ export function ifdef(value, defaultValue) {
   return typeof value !== 'undefined' ? value : defaultValue;
 }
 
-// Templating
-
-export function Template(func) {
-
-  const keyMap = new Map();
-
-  function keyId(id) {
-    function set(key) {
-      const $ = {};
-      keyMap.set(key, $);
-      return $;
-    }
-
-    return keyMap.get(id) || set(id);
-  }
-
-  const proto = {
-    key: {},
-    part() {
-      return html.for(this.key);
-    },
-    for(self, id, args) {
-      this.key = keyId(id);
-      return func.call(this, args);
-    },
-    keyed(id, args) {
-      this.key = id;
-      return func.call(this, args);
-    }
-  };
-  return Object.create(proto);
-}
-
 // directives
 
 export function vFor(items, cb) {
