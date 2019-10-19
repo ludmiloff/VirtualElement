@@ -102,6 +102,73 @@ function Component(Class, args, parent, id) {
   return _factory;
 }
 
+// Lightweight jsx fragments (v2 rendering only)
+
+class Fragment {
+
+  // simplified version of Component.for factory
+  // see https://github.com/WebReflection/hyperHTML/blob/master/esm/classes/Component.js
+  // all credits goes to their original author
+  static for(parent, id, props) {
+    const _props = props === undefined ? {} : props;
+    if (typeof parent.__childs__ === 'undefined') { parent.__childs__ = {}; }
+    if (parent.__childs__[id]) {
+      return parent.__childs__[id](props);
+    }
+    parent.__childs__[id] = Component(this, _props, parent, id);
+    return parent.__childs__[id];
+  }
+
+  constructor(props) {
+    // this DOM node
+    this._node = null;
+    // parent element
+    this.__parent__ = null;
+    // nested childs
+    this.__childs__ = {};
+    // partial render keys
+    this.__partKeys__ = {};    
+
+    this.props = props;
+    this.render = this.render.bind(this);
+    this._updater = this._updater.bind(this);  
+  }
+
+  get node() { return this._node; }
+
+  part(partId) {
+    const partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {tagger: new Tagger('html'), wire: null});
+
+    return function() {
+      // eslint-disable-next-line prefer-spread, prefer-rest-params
+      const result = partKey.tagger.apply(null, arguments);
+      // eslint-disable-next-line no-return-assign
+      return partKey.wire || (partKey.wire = wiredContent(result));
+    }
+  }
+
+  onDisconnected() {
+    // fix possible memory leak with container components displaying multiple list items
+    if (this.__parent__ && this.__parent__.__childs__) {
+      delete this.__parent__.__childs__[this.id];
+    }
+  }  
+
+  _setProps(props) {
+    this.props = props;
+  }
+
+  _updater() {
+    const template = this.render(this.props)
+    const wire = this._node || (this._node = template);
+    return wire;    
+  }
+
+  render(props) {
+    return '';
+  }
+};
+
 // VirtualElement encapsulation and setup
 
 class VirtualElement {
@@ -319,6 +386,7 @@ class VirtualElement {
 import { mapClass, ifdef, vFor, vLoop, vIf, vAnimation } from './helpers';
 
 export {
+  Fragment,
   VirtualElement,
   Component,
   // helpers
