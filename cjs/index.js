@@ -12,6 +12,10 @@ const components = new Map();
 function tearDown(mutations) {
   mutations.forEach((mutation) => {
     components.forEach((comp) => {
+      if (comp.hydrated) {
+        // do not remove hydrated components
+        return;
+      }
       if (includes.call(mutation.removedNodes, comp.node) || (!document.body.contains(comp.node))) {
         comp.onDisconnected();
         const _key = comp.key;
@@ -99,6 +103,73 @@ function Component(Class, args, parent, id) {
   return _factory;
 }
 
+// Lightweight jsx fragments (v2 rendering only)
+
+class Fragment {
+
+  // simplified version of Component.for factory
+  // see https://github.com/WebReflection/hyperHTML/blob/master/esm/classes/Component.js
+  // all credits goes to their original author
+  static for(parent, id, props) {
+    const _props = props === undefined ? {} : props;
+    if (typeof parent.__childs__ === 'undefined') { parent.__childs__ = {}; }
+    if (parent.__childs__[id]) {
+      return parent.__childs__[id](props);
+    }
+    parent.__childs__[id] = Component(this, _props, parent, id);
+    return parent.__childs__[id];
+  }
+
+  constructor(props) {
+    // this DOM node
+    this._node = null;
+    // parent element
+    this.__parent__ = null;
+    // nested childs
+    this.__childs__ = {};
+    // partial render keys
+    this.__partKeys__ = {};    
+
+    this.props = props;
+    this.render = this.render.bind(this);
+    this._updater = this._updater.bind(this);  
+  }
+
+  get node() { return this._node; }
+
+  part(partId) {
+    const partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {tagger: new Tagger('html'), wire: null});
+
+    return function() {
+      // eslint-disable-next-line prefer-spread, prefer-rest-params
+      const result = partKey.tagger.apply(null, arguments);
+      // eslint-disable-next-line no-return-assign
+      return partKey.wire || (partKey.wire = wiredContent(result));
+    }
+  }
+
+  onDisconnected() {
+    // fix possible memory leak with container components displaying multiple list items
+    if (this.__parent__ && this.__parent__.__childs__) {
+      delete this.__parent__.__childs__[this.id];
+    }
+  }  
+
+  _setProps(props) {
+    this.props = props;
+  }
+
+  _updater() {
+    const template = this.render(this.props)
+    const wire = this._node || (this._node = template);
+    return wire;    
+  }
+
+  render(props) {
+    return '';
+  }
+};
+
 // VirtualElement encapsulation and setup
 
 class VirtualElement {
@@ -123,6 +194,8 @@ class VirtualElement {
 
   constructor() {
     // html renderer internals
+    // set hydrated=true for bypass first render and use content provided by SSR
+    this.hydrated = false;
     // setting v2 to true will switch to version 2 rendering style
     this.v2 = false;
     this.$ = new Tagger('html');
@@ -177,7 +250,6 @@ class VirtualElement {
     return function() {
       // eslint-disable-next-line prefer-spread, prefer-rest-params
       const result = partKey.tagger.apply(null, arguments);
-      // console.log(result);
       // eslint-disable-next-line no-return-assign
       return partKey.wire || (partKey.wire = wiredContent(result));
     }    
@@ -199,7 +271,7 @@ class VirtualElement {
     const oldVal = this.__values__[property];
     this.__values__[property] = value;
     if (oldVal !== value || typeof value === 'object') {
-      if (this.watched[property] && this.watched[property](value)) {
+      if (this.watched[property] && this.watched[property](value, oldValue)) {
         return;
       }
       if (!this._needsRender) this.invalidate();
@@ -231,6 +303,10 @@ class VirtualElement {
   invalidate() {
     if (!this._needsRender) {
       this._needsRender = true;
+      if (this.hydrated) {
+        Promise.resolve().then(() => this.deHydrate());
+        return;
+      }
       Promise.resolve().then(() => {
         if (this._needsRender) this.update();
       });
@@ -247,8 +323,14 @@ class VirtualElement {
     return '';
   }
 
+  // ugly, yet working solution to continue normal work after first render
+  deHydrate() {
+    this._node = null;
+    this.hydrated = false;
+    this.__parent__.invalidate();
+  }
   _updater() {
-    const template = this.render();
+    const template = this.hydrated ? this._node : this.render();
     const wire = this._node || (this._node = this.v2 ? template : wiredContent(template));
     this.onRender();
     if (!this._connected) {
@@ -304,6 +386,7 @@ class VirtualElement {
 
 const { mapClass, ifdef, vFor, vLoop, vIf, vAnimation } = require('./helpers');
 
+exports.Fragment = Fragment
 exports.VirtualElement = VirtualElement
 exports.Component = Component
 exports.render = render

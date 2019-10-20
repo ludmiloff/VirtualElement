@@ -1810,6 +1810,11 @@ var veljs = (function (document,exports) {
   function tearDown(mutations) {
     mutations.forEach(function (mutation) {
       components.forEach(function (comp) {
+        if (comp.hydrated) {
+          // do not remove hydrated components
+          return;
+        }
+
         if (includes.call(mutation.removedNodes, comp.node) || !document.body.contains(comp.node)) {
           comp.onDisconnected();
           var _key = comp.key;
@@ -1920,8 +1925,97 @@ var veljs = (function (document,exports) {
     };
 
     return _factory;
-  } // VirtualElement encapsulation and setup
+  } // Lightweight jsx fragments (v2 rendering only)
 
+
+  var Fragment =
+  /*#__PURE__*/
+  function () {
+    _createClass(Fragment, null, [{
+      key: "for",
+      // simplified version of Component.for factory
+      // see https://github.com/WebReflection/hyperHTML/blob/master/esm/classes/Component.js
+      // all credits goes to their original author
+      value: function _for(parent, id, props) {
+        var _props = props === undefined ? {} : props;
+
+        if (typeof parent.__childs__ === 'undefined') {
+          parent.__childs__ = {};
+        }
+
+        if (parent.__childs__[id]) {
+          return parent.__childs__[id](props);
+        }
+
+        parent.__childs__[id] = Component(this, _props, parent, id);
+        return parent.__childs__[id];
+      }
+    }]);
+
+    function Fragment(props) {
+      _classCallCheck(this, Fragment);
+
+      // this DOM node
+      this._node = null; // parent element
+
+      this.__parent__ = null; // nested childs
+
+      this.__childs__ = {}; // partial render keys
+
+      this.__partKeys__ = {};
+      this.props = props;
+      this.render = this.render.bind(this);
+      this._updater = this._updater.bind(this);
+    }
+
+    _createClass(Fragment, [{
+      key: "part",
+      value: function part(partId) {
+        var partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {
+          tagger: new Tagger('html'),
+          wire: null
+        });
+        return function () {
+          // eslint-disable-next-line prefer-spread, prefer-rest-params
+          var result = partKey.tagger.apply(null, arguments); // eslint-disable-next-line no-return-assign
+
+          return partKey.wire || (partKey.wire = wiredContent$1(result));
+        };
+      }
+    }, {
+      key: "onDisconnected",
+      value: function onDisconnected() {
+        // fix possible memory leak with container components displaying multiple list items
+        if (this.__parent__ && this.__parent__.__childs__) {
+          delete this.__parent__.__childs__[this.id];
+        }
+      }
+    }, {
+      key: "_setProps",
+      value: function _setProps(props) {
+        this.props = props;
+      }
+    }, {
+      key: "_updater",
+      value: function _updater() {
+        var template = this.render(this.props);
+        var wire = this._node || (this._node = template);
+        return wire;
+      }
+    }, {
+      key: "render",
+      value: function render(props) {
+        return '';
+      }
+    }, {
+      key: "node",
+      get: function get() {
+        return this._node;
+      }
+    }]);
+
+    return Fragment;
+  }();
 
   var VirtualElement =
   /*#__PURE__*/
@@ -1960,7 +2054,9 @@ var veljs = (function (document,exports) {
       _classCallCheck(this, VirtualElement);
 
       // html renderer internals
-      // setting v2 to true will switch to version 2 rendering style
+      // set hydrated=true for bypass first render and use content provided by SSR
+      this.hydrated = false; // setting v2 to true will switch to version 2 rendering style
+
       this.v2 = false;
       this.$ = new Tagger('html');
 
@@ -2014,8 +2110,7 @@ var veljs = (function (document,exports) {
         });
         return function () {
           // eslint-disable-next-line prefer-spread, prefer-rest-params
-          var result = partKey.tagger.apply(null, arguments); // console.log(result);
-          // eslint-disable-next-line no-return-assign
+          var result = partKey.tagger.apply(null, arguments); // eslint-disable-next-line no-return-assign
 
           return partKey.wire || (partKey.wire = wiredContent$1(result));
         };
@@ -2027,7 +2122,7 @@ var veljs = (function (document,exports) {
         this.__values__[property] = value;
 
         if (oldVal !== value || typeof(value) === 'object') {
-          if (this.watched[property] && this.watched[property](value)) {
+          if (this.watched[property] && this.watched[property](value, oldValue)) {
             return;
           }
 
@@ -2073,6 +2168,14 @@ var veljs = (function (document,exports) {
 
         if (!this._needsRender) {
           this._needsRender = true;
+
+          if (this.hydrated) {
+            Promise.resolve().then(function () {
+              return _this3.deHydrate();
+            });
+            return;
+          }
+
           Promise.resolve().then(function () {
             if (_this3._needsRender) _this3.update();
           });
@@ -2090,13 +2193,22 @@ var veljs = (function (document,exports) {
         }
 
         return '';
+      } // ugly, yet working solution to continue normal work after first render
+
+    }, {
+      key: "deHydrate",
+      value: function deHydrate() {
+        this._node = null;
+        this.hydrated = false;
+
+        this.__parent__.invalidate();
       }
     }, {
       key: "_updater",
       value: function _updater() {
         var _this4 = this;
 
-        var template = this.render();
+        var template = this.hydrated ? this._node : this.render();
         var wire = this._node || (this._node = this.v2 ? template : wiredContent$1(template));
         this.onRender();
 
@@ -2199,6 +2311,7 @@ var veljs = (function (document,exports) {
   }();
 
   exports.Component = Component;
+  exports.Fragment = Fragment;
   exports.VirtualElement = VirtualElement;
   exports.html = html$1;
   exports.ifdef = ifdef;
