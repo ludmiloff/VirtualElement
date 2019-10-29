@@ -90,9 +90,13 @@ function Component(Class, args, parent, id) {
   }
 
   function _factory(props) {
-    const comp = components.get(_key) || _create();
-    if (props) {
-      comp._setProps(props);
+    let comp = components.get(_key);
+    if (comp) {
+      if (props && !(props instanceof Comment)) { // wtf
+        comp._setProps(props);
+      }
+    } else {
+      comp = _create();
     }
     return comp._updater;
   }
@@ -268,9 +272,9 @@ class VirtualElement {
   get id() { return this._id; }
 
   _setPropertyValue(property, value) {
-    const oldVal = this.__values__[property];
+    const oldValue = this.__values__[property];
     this.__values__[property] = value;
-    if (oldVal !== value || typeof value === 'object') {
+    if (oldValue !== value || typeof value === 'object') {
       if (this.watched[property] && this.watched[property](value, oldValue)) {
         return;
       }

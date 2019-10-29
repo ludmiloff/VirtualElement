@@ -1909,10 +1909,15 @@ var veljs = (function (document,exports) {
     }
 
     function _factory(props) {
-      var comp = components.get(_key) || _create();
+      var comp = components.get(_key);
 
-      if (props) {
-        comp._setProps(props);
+      if (comp) {
+        if (props && !(props instanceof Comment)) {
+          // wtf
+          comp._setProps(props);
+        }
+      } else {
+        comp = _create();
       }
 
       return comp._updater;
@@ -2118,10 +2123,10 @@ var veljs = (function (document,exports) {
     }, {
       key: "_setPropertyValue",
       value: function _setPropertyValue(property, value) {
-        var oldVal = this.__values__[property];
+        var oldValue = this.__values__[property];
         this.__values__[property] = value;
 
-        if (oldVal !== value || typeof(value) === 'object') {
+        if (oldValue !== value || typeof(value) === 'object') {
           if (this.watched[property] && this.watched[property](value, oldValue)) {
             return;
           }
