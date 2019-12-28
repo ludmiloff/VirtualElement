@@ -79,7 +79,7 @@ function Component(Class, args, parent, id) {
       if (id && parent.stylesRegistry[id]) {
         comp.styles = {...comp.styles, ...parent.stylesRegistry[id]};
       } else {
-        const clsName = Class.className || false;
+        const clsName = Class.name || false;
         if (clsName && parent.stylesRegistry[clsName]) {
           comp.styles = {...comp.styles, ...parent.stylesRegistry[clsName]};
         }
@@ -199,8 +199,8 @@ class VirtualElement {
     // html renderer internals
     // set hydrated=true for bypass first render and use content provided by SSR
     this.hydrated = false;
-    // setting v2 to true will switch to version 2 rendering style
-    this.v2 = false;
+    // v2 rendering style by default
+    this.v2 = true;
     this.$ = new Tagger('html');
     this._html = function () {
       return this.$.apply(null, arguments);
@@ -387,7 +387,7 @@ class VirtualElement {
   }
 }
 
-import { mapClass, ifdef, vFor, vLoop, vIf, vAnimation } from './helpers';
+import { mapClass, vLoop, vAnimation } from './helpers';
 
 export {
   Fragment,
@@ -398,11 +398,8 @@ export {
   html,
   svg,
   mapClass,
-  ifdef,
   // directives
-  vFor,
   vLoop,
-  vIf,
   vAnimation
 }
 
