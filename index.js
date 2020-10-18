@@ -1720,18 +1720,8 @@ var veljs = (function (document,exports) {
     return length === 1 ? childNodes[0] : length ? new Wire(childNodes) : node;
   }
 
-  function _templateObject2() {
-    var data = _taggedTemplateLiteral(["<div class=\"", "\">", "</div>"]);
-
-    _templateObject2 = function _templateObject2() {
-      return data;
-    };
-
-    return data;
-  }
-
   function _templateObject() {
-    var data = _taggedTemplateLiteral([""]);
+    var data = _taggedTemplateLiteral(["<div class=\"", "\">", "</div>"]);
 
     _templateObject = function _templateObject() {
       return data;
@@ -1747,32 +1737,13 @@ var veljs = (function (document,exports) {
     }).map(function (e) {
       return typeof e === 'string' ? e : e[0];
     }).join(' ');
-  }
-  function ifdef(value, defaultValue) {
-    return typeof value !== 'undefined' ? value : defaultValue;
   } // directives
 
-  function vFor(items, cb) {
-    return items.map(function (it, index) {
-      return cb(it, index);
-    });
-  }
   function vLoop(items, cb) {
     return items.map(function (it, index) {
       var r = cb(it, index);
       return typeof r === 'function' && r._nameId && r._nameId === '_factory' ? r() : r;
     });
-  }
-  function vIf(cond, comp1, comp2) {
-    if (cond) {
-      return comp1;
-    }
-
-    if (comp2) {
-      return comp2;
-    }
-
-    return html["for"]({})(_templateObject());
   }
   var animations = new WeakMap();
   function vAnimation(cond, comp, key, name) {
@@ -1790,7 +1761,7 @@ var veljs = (function (document,exports) {
       className = "".concat(animationName, " ").concat(hide);
     }
 
-    return html["for"](key)(_templateObject2(), className, comp);
+    return html["for"](key)(_templateObject(), className, comp);
   }
 
   function _templateObject$1() {
@@ -1897,10 +1868,10 @@ var veljs = (function (document,exports) {
         if (id && parent.stylesRegistry[id]) {
           comp.styles = _objectSpread2({}, comp.styles, {}, parent.stylesRegistry[id]);
         } else {
-          var clsName = Class.className || false;
+          var compName = Class.compName || false;
 
-          if (clsName && parent.stylesRegistry[clsName]) {
-            comp.styles = _objectSpread2({}, comp.styles, {}, parent.stylesRegistry[clsName]);
+          if (compName && parent.stylesRegistry[compName]) {
+            comp.styles = _objectSpread2({}, comp.styles, {}, parent.stylesRegistry[compName]);
           }
         }
       }
@@ -2060,9 +2031,9 @@ var veljs = (function (document,exports) {
 
       // html renderer internals
       // set hydrated=true for bypass first render and use content provided by SSR
-      this.hydrated = false; // setting v2 to true will switch to version 2 rendering style
+      this.hydrated = false; // v2 rendering style by default
 
-      this.v2 = false;
+      this.v2 = true;
       this.$ = new Tagger('html');
 
       this._html = function () {
@@ -2085,7 +2056,7 @@ var veljs = (function (document,exports) {
 
       this.__partKeys__ = {}; // property watchers
 
-      this.watched = {}; // styles registry
+      this.watched = this.watchers(); // styles registry
 
       this.stylesRegistry = {};
       this.styles = {};
@@ -2124,14 +2095,19 @@ var veljs = (function (document,exports) {
       key: "_setPropertyValue",
       value: function _setPropertyValue(property, value) {
         var oldValue = this.__values__[property];
-        this.__values__[property] = value;
 
-        if (oldValue !== value || typeof(value) === 'object') {
-          if (this.watched[property] && this.watched[property](value, oldValue)) {
-            return;
+        if (oldValue !== value) {
+          if (this.watched[property]) {
+            var newValue = this.watched[property](value, oldValue);
+
+            if (typeof newValue !== 'undefined') {
+              this.__values__[property] = newValue;
+              if (!this._needsRender) this.invalidate();
+            }
+          } else {
+            this.__values__[property] = value;
+            if (!this._needsRender) this.invalidate();
           }
-
-          if (!this._needsRender) this.invalidate();
         }
       }
     }, {
@@ -2147,8 +2123,12 @@ var veljs = (function (document,exports) {
           Object.keys(props).forEach(function (key) {
             _this2._setPropertyValue(key, props[key]);
           });
-        } // this.invalidate();
-
+        }
+      }
+    }, {
+      key: "watchers",
+      value: function watchers() {
+        return {};
       }
     }, {
       key: "onConnected",
@@ -2319,13 +2299,10 @@ var veljs = (function (document,exports) {
   exports.Fragment = Fragment;
   exports.VirtualElement = VirtualElement;
   exports.html = html$1;
-  exports.ifdef = ifdef;
   exports.mapClass = mapClass;
   exports.render = render;
   exports.svg = svg;
   exports.vAnimation = vAnimation;
-  exports.vFor = vFor;
-  exports.vIf = vIf;
   exports.vLoop = vLoop;
 
   return exports;

@@ -80,9 +80,9 @@ function Component(Class, args, parent, id) {
       if (id && parent.stylesRegistry[id]) {
         comp.styles = {...comp.styles, ...parent.stylesRegistry[id]};
       } else {
-        const clsName = Class.className || false;
-        if (clsName && parent.stylesRegistry[clsName]) {
-          comp.styles = {...comp.styles, ...parent.stylesRegistry[clsName]};
+        const compName = Class.compName || false;
+        if (compName && parent.stylesRegistry[compName]) {
+          comp.styles = {...comp.styles, ...parent.stylesRegistry[compName]};
         }
       }
     }
@@ -200,8 +200,8 @@ class VirtualElement {
     // html renderer internals
     // set hydrated=true for bypass first render and use content provided by SSR
     this.hydrated = false;
-    // setting v2 to true will switch to version 2 rendering style
-    this.v2 = false;
+    // v2 rendering style by default
+    this.v2 = true;
     this.$ = new Tagger('html');
     this._html = function () {
       return this.$.apply(null, arguments);
@@ -226,7 +226,7 @@ class VirtualElement {
     this.__partKeys__ = {};
 
     // property watchers
-    this.watched = {};
+    this.watched = this.watchers();
 
     // styles registry
     this.stylesRegistry = {};
@@ -272,13 +272,18 @@ class VirtualElement {
   get id() { return this._id; }
 
   _setPropertyValue(property, value) {
-    const oldValue = this.__values__[property];
-    this.__values__[property] = value;
-    if (oldValue !== value || typeof value === 'object') {
-      if (this.watched[property] && this.watched[property](value, oldValue)) {
-        return;
-      }
-      if (!this._needsRender) this.invalidate();
+    const oldValue = this.__values__[property];    
+    if (oldValue !== value) {
+      if (this.watched[property]) {
+        const newValue = this.watched[property](value, oldValue);
+        if (typeof newValue !== 'undefined') {
+          this.__values__[property] = newValue;          
+          if (!this._needsRender) this.invalidate();
+        }        
+      } else {
+        this.__values__[property] = value;
+        if (!this._needsRender) this.invalidate();
+      }      
     }
   }
 
@@ -289,7 +294,10 @@ class VirtualElement {
         this._setPropertyValue(key, props[key]);
       });
     }
-    // this.invalidate();
+  }
+
+  watchers() {
+    return {}
   }
 
   onConnected() {}
@@ -388,7 +396,7 @@ class VirtualElement {
   }
 }
 
-const { mapClass, ifdef, vFor, vLoop, vIf, vAnimation } = require('./helpers');
+const { mapClass, vLoop, vAnimation } = require('./helpers');
 
 exports.Fragment = Fragment
 exports.VirtualElement = VirtualElement
@@ -397,9 +405,6 @@ exports.render = render
 exports.html = html
 exports.svg = svg
 exports.mapClass = mapClass
-exports.ifdef = ifdef
-exports.vFor = vFor
 exports.vLoop = vLoop
-exports.vIf = vIf
 exports.vAnimation = vAnimation
 

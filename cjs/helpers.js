@@ -7,17 +7,8 @@ function mapClass(classes) {
 }
 exports.mapClass = mapClass
 
-function ifdef(value, defaultValue) {
-  return typeof value !== 'undefined' ? value : defaultValue;
-}
-exports.ifdef = ifdef
 
 // directives
-
-function vFor(items, cb) {
-  return items.map((it, index) => cb(it, index));
-}
-exports.vFor = vFor
 
 function vLoop(items, cb) {
   return items.map((it, index) => {
@@ -26,17 +17,6 @@ function vLoop(items, cb) {
   });
 }
 exports.vLoop = vLoop
-
-function vIf(cond, comp1, comp2) {
-  if (cond) {
-    return comp1;
-  }
-  if (comp2) {
-    return comp2;
-  }
-  return html.for({})``;
-}
-exports.vIf = vIf
 
 const animations = new WeakMap();
 
