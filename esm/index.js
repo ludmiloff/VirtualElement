@@ -79,9 +79,9 @@ function Component(Class, args, parent, id) {
       if (id && parent.stylesRegistry[id]) {
         comp.styles = {...comp.styles, ...parent.stylesRegistry[id]};
       } else {
-        const clsName = Class.name || false;
-        if (clsName && parent.stylesRegistry[clsName]) {
-          comp.styles = {...comp.styles, ...parent.stylesRegistry[clsName]};
+        const compName = Class.compName || false;
+        if (compName && parent.stylesRegistry[compName]) {
+          comp.styles = {...comp.styles, ...parent.stylesRegistry[compName]};
         }
       }
     }
@@ -225,7 +225,7 @@ class VirtualElement {
     this.__partKeys__ = {};
 
     // property watchers
-    this.watched = {};
+    this.watched = this.watchers();
 
     // styles registry
     this.stylesRegistry = {};
@@ -271,13 +271,18 @@ class VirtualElement {
   get id() { return this._id; }
 
   _setPropertyValue(property, value) {
-    const oldValue = this.__values__[property];
-    this.__values__[property] = value;
-    if (oldValue !== value || typeof value === 'object') {
-      if (this.watched[property] && this.watched[property](value, oldValue)) {
-        return;
-      }
-      if (!this._needsRender) this.invalidate();
+    const oldValue = this.__values__[property];    
+    if (oldValue !== value) {
+      if (this.watched[property]) {
+        const newValue = this.watched[property](value, oldValue);
+        if (typeof newValue !== 'undefined') {
+          this.__values__[property] = newValue;          
+          if (!this._needsRender) this.invalidate();
+        }        
+      } else {
+        this.__values__[property] = value;
+        if (!this._needsRender) this.invalidate();
+      }      
     }
   }
 
@@ -288,7 +293,10 @@ class VirtualElement {
         this._setPropertyValue(key, props[key]);
       });
     }
-    // this.invalidate();
+  }
+
+  watchers() {
+    return {}
   }
 
   onConnected() {}
