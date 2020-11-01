@@ -64,7 +64,7 @@ function attachProperty(prototype, property, options) {
     if (val === null || val === undefined || typeof val === 'function') {
       value = val;
     } else {
-      value = value = type ? type(val) : val;
+      value = type ? type(val) : val;
     }
 
     prototype._setPropertyValue(property, value);
