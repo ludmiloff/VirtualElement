@@ -8,10 +8,32 @@ const includes = Array.prototype.includes;
 // VirtualElement component cache
 const components = new Map();
 
+// Create template literal
+function createTemplate(strings, raw) {
+  if (!raw) {
+    raw = strings.slice(0);
+  }
+
+  return Object.freeze(Object.defineProperties(strings, {
+    raw: {
+      value: Object.freeze(raw)
+    }
+  }));
+}
+
+// Replace tag in template literal and create literal
+function replaceTag(template, tag) {
+  const strings = []
+  for (let i = 0; i < template.length; i++) {
+    strings.push(template[i].replace('{tag}', tag))
+  }
+  return createTemplate(strings)
+}
+
 function tearDown(mutations) {
   mutations.forEach((mutation) => {
     components.forEach((comp) => {
-      if (comp.hydrated) {
+      if (comp.hydrated || comp.node instanceof Wire || comp.node instanceof Function) {
         // do not remove hydrated components
         return;
       }
@@ -32,7 +54,7 @@ function attachProperty(prototype, property, options) {
 
   function get() {
     const v = prototype.__values__[property];
-    if (typeof v === 'function') { return v(); }
+    if (typeof v === 'function' && type !== Function) { return v(); }
     return v;
   }
 
@@ -41,7 +63,7 @@ function attachProperty(prototype, property, options) {
     if (val === null || val === undefined || typeof val === 'function') {
       value = val;
     } else {
-      value = type(val);
+      value = value = type ? type(val) : val;
     }
 
     prototype._setPropertyValue(property, value);
@@ -95,6 +117,7 @@ function Component(Class, args, parent, id) {
         comp._setProps(props);
       }
     } else {
+      if (props && !(props instanceof Comment)) { args = props; }
       comp = _create();
     }
     return comp._updater;
@@ -232,19 +255,34 @@ class VirtualElement {
     this.styles = {};
 
     const props = this.constructor.properties;
+    this.attachProps(props)
 
+    this.templateCache = {}
+
+    this.render = this.render.bind(this);
+    this._updater = this._updater.bind(this);
+  }
+
+  /**
+   * Attach managed properties and corresponding watchers to this object.
+   * @param {Object} props 
+   * @param {Object} watchers 
+   */
+  attachProps(props, watchers) {
     if (props) {
       Object.keys(props).forEach((name) => {
         const prop = props[name];
         attachProperty(this, name, prop);
-        if (typeof prop.default !== 'undefined') {
+        if (prop.type && typeof prop.default !== 'undefined') {
           this.__values__[name] = prop.default;
+        } else {
+          this.__values__[name] = prop
+        }
+        if (watchers && watchers[name]) {
+          this.watched[name] = watchers[name]
         }
       });
     }
-
-    this.render = this.render.bind(this);
-    this._updater = this._updater.bind(this);
   }
 
   part(partId) {
@@ -256,7 +294,25 @@ class VirtualElement {
       // eslint-disable-next-line no-return-assign
       return partKey.wire || (partKey.wire = wiredContent(result));
     }    
-  }  
+  }
+
+  /**
+   * Element part with dynamic tag replacement
+   * @param {*} partId 
+   * @param {*} tag 
+   */
+  dtt(partId, tag) {
+    const partKey = this.__partKeys__[partId] || (this.__partKeys__[partId] = {tagger: new Tagger('html'), wire: null});
+    const self = this
+    return function() {
+      // eslint-disable-next-line prefer-spread, prefer-rest-params      
+      let cached = self.templateCache[tag] || (self.templateCache[tag] = replaceTag(arguments[0], tag))
+      arguments[0] = cached
+      const result = partKey.tagger.apply(null, arguments);
+      // eslint-disable-next-line no-return-assign
+      return partKey.wire || (partKey.wire = wiredContent(result));
+    }   
+  }
 
   get html() { return this._html; }
 
@@ -272,17 +328,14 @@ class VirtualElement {
 
   _setPropertyValue(property, value) {
     const oldValue = this.__values__[property];    
+    this.__values__[property] = value; 
     if (oldValue !== value) {
-      if (this.watched[property]) {
-        const newValue = this.watched[property](value, oldValue);
-        if (typeof newValue !== 'undefined') {
-          this.__values__[property] = newValue;          
-          if (!this._needsRender) this.invalidate();
-        }        
-      } else {
-        this.__values__[property] = value;
-        if (!this._needsRender) this.invalidate();
-      }      
+      // return true from watcher if change should not trigger extra invalidation
+      // e.g watcher might call invalidate() manually or would change another property
+      if (this.watched[property] && this.watched[property](value, oldValue)) {
+        return;
+      }
+      if (!this._needsRender) this.invalidate();    
     }
   }
 
