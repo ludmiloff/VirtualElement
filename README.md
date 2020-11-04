@@ -51,7 +51,7 @@ Each virtual element might have a set of reactive properties. Changing value wil
 import { VirtualElement, render, Component } from 'veljs';
 
 class MyElement extends VirtualElement {
-  statig get properties() {
+  static get properties() {
     return {
       cnt: { type: Number, default: 0}
     }
